@@ -11,7 +11,7 @@ log_file = f"./flaskr/Logs/record_{datetime.now().strftime(time_frmt)}.log"
 logging.basicConfig(filename=log_file, level=logging.INFO, format = '%(message)s')
 
 
-def create_manifest():
+def create_index():
 	storage_dir = "./flaskr/Surveys"
 
 	manifest_dict = {}
@@ -46,7 +46,7 @@ def create_app(test_config=None):
 		DATABASE=os.path.join(app.instance_path, 'flaskr.sqlite')
 	)
 
-	create_manifest()
+	create_index()
 
 	if test_config is None:
 		app.config.from_pyfile('config.py', silent=True)
@@ -65,9 +65,9 @@ def create_app(test_config=None):
 	# this route is basically just for downloading the manifest but im leaving it as is in case I need it again later
 	@app.route('/Surveys/<name>')
 	def download_file(name):
-		if name == '_manifest.csv':
+		if name == '_index.csv':
 			#print("updating manifest")
-			create_manifest()
+			create_index()
 		return send_from_directory(app.config["UPLOAD_FOLDER"], name)
 
 	app.add_url_rule('/Surveys/<name>',
