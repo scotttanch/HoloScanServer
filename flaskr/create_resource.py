@@ -53,6 +53,7 @@ def read_path_csv(csv_file):
     xs = df[0].to_list()
     ys = df[2].to_list()
     zs = df[1].to_list()
+    # TODO: Implement some kind of smoothing on points being read in. Maybe step through and ignore any points less that some critical separation
     return xs, ys, zs
 
 def texture_from_dzt(scan_path, scan_name, model_folder):
@@ -75,6 +76,9 @@ def texture_from_dzt(scan_path, scan_name, model_folder):
     flipped = np.fliplr(channel_0)
     full_texture = np.hstack((flipped, channel_0))
     plt.imsave(model_folder + "/" + texture_name, full_texture)
+
+    # TODO: Implement a second texture set. This one should remove the background in a more literal sense by making it transparent
+
     return depth
 
 

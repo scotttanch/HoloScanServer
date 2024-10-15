@@ -27,7 +27,7 @@ def create_index():
 		manifest_dict[survey] = survey_files
 
 	# write out the manifest
-	manifest_file = os.path.join(storage_dir, "_manifest.csv")
+	manifest_file = os.path.join(storage_dir, "_index.csv")
 	with open(manifest_file, "w") as f:
 		for key in manifest_dict:
 			new_line = [key]
