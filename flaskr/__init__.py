@@ -9,7 +9,7 @@ ALLOWED_EXTENSIONS = {'csv', 'dzt'}
 LOG_FOLDER = 'Logs'
 time_frmt = "%y-%m-%d"
 log_file = f"./flaskr/Logs/record_{datetime.now().strftime(time_frmt)}.log"
-logging.basicConfig(filename=log_file, level=logging.INFO, format='%(message)s')
+#logging.basicConfig(filename=log_file, level=logging.INFO, format='%(message)s')
 
 
 def allowed_file(filename):
@@ -83,9 +83,7 @@ def create_app(test_config=None):
 	
 	app.add_url_rule('/Surveys/<survey>/<scan>/<file_name>', endpoint="download_file", build_only=True)
 
-	# Need to add handeling for uploading files, and a check to see if, after a file has been uploaded, we have enough
-	# data to process into a HoloScan
-
+	# Most of this function is way more specific than it should be. But it does function
 	@app.route('/', methods=['GET', 'POST'])
 	def upload_file():
 		if request.method == 'POST':
@@ -105,17 +103,17 @@ def create_app(test_config=None):
 
 			# Need to now make sure that the folder we want exits
 			# First see if the survey folder exists
-			if not os.path.exists(f'Surveys/{components[0]}'):
-				os.mkdir(f'Surveys/{components}')
-			if not os.path.exists(f'Surveys/{components[0]}/{components[1]}'):
-				os.mkdir(f'Surveys/{components[0]}/{components[1]}')
+			if not os.path.exists(f'./flaskr/Surveys/{components[0]}'):
+				os.mkdir(f'./flaskr/Surveys/{components[0]}')
+			if not os.path.exists(f'./flaskr/Surveys/{components[0]}/{components[1]}'):
+				os.mkdir(f'./flaskr/Surveys/{components[0]}/{components[1]}')
 
 			if file and allowed_file(file.filename):
 
 				filename = file.filename
 
-				file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-				return redirect(url_for('download_file', name=filename))
+				file.save(f"./flaskr/Surveys/{filename}")
+				return redirect(request.url)
 		html_string = '''<!doctype html>
 						<title>Upload new File</title>
 						<h1>Upload new File</h1>
