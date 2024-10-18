@@ -96,11 +96,24 @@ def create_app(test_config=None):
 			if file.filename == '':
 				flash('No Selected file')
 				return redirect(request.url)
+
+			# Ensure that the file name is of the format survey_name/scan_name/file_name
+			components = file.filename.split('/')
+			if len(components) > 3:
+				flash('Invalid file name')
+				return redirect(request.url)
+
+			# Need to now make sure that the folder we want exits
+			# First see if the survey folder exists
+			if not os.path.exists(f'Surveys/{components[0]}'):
+				os.mkdir(f'Surveys/{components}')
+			if not os.path.exists(f'Surveys/{components[0]}/{components[1]}'):
+				os.mkdir(f'Surveys/{components[0]}/{components[1]}')
+
 			if file and allowed_file(file.filename):
-				# Need to implement my own secure file name function
-				# which should only allow file names that go in surveys
-				# and have the propper structure
-				filename = file.filename  # TODO: Replace this
+
+				filename = file.filename
+
 				file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 				return redirect(url_for('download_file', name=filename))
 		html_string = '''<!doctype html>
