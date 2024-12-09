@@ -67,7 +67,7 @@ def create_app(test_config=None):
 	@app.route('/hello')
 	def hello():
 		return 'Hello, World'
-	
+
 	# Route/URL Pattern for main folder download. Applies only to _index.csv
 	@app.route('/Surveys/<name>')
 	def download_file(name):
@@ -81,7 +81,7 @@ def create_app(test_config=None):
 	@app.route('/Surveys/<survey>/<scan>/<file_name>')
 	def new_download_file(survey, scan, file_name):
 		return send_from_directory(app.config["UPLOAD_FOLDER"], f"{survey}/{scan}/{file_name}")
-	
+
 	app.add_url_rule('/Surveys/<survey>/<scan>/<file_name>', endpoint="download_file", build_only=True)
 
 	# Most of this function is way more specific than it should be. But it does function
@@ -117,7 +117,7 @@ def create_app(test_config=None):
 
 				folder = f'./flaskr/Surveys/{components[0]}/{components[1]}'
 				ready_to_process = (any([content.startswith("FILE") for content in os.listdir(folder)]) and
-								   any([content.startswith("PATH") for content in os.listdir(folder)]))
+									any([content.startswith("PATH") for content in os.listdir(folder)]))
 				if ready_to_process:
 					print("Creating Resources")
 					create_resources.create_resources(folder)
