@@ -6,6 +6,7 @@ from flask import send_from_directory
 from flaskr import create_resources
 
 UPLOAD_FOLDER = 'Surveys'
+STORAGE_DIR = "./flaskr/Surveys"
 ALLOWED_EXTENSIONS = {'csv', 'dzt'}
 LOG_FOLDER = 'Logs'
 time_frmt = "%y-%m-%d"
@@ -18,27 +19,68 @@ def allowed_file(filename):
 	return allowed
 
 
+def get_children(parent_dir):
+	"""
+	Returns the child directories of some parent
+
+	Args:
+		parent_dir (str): Path to parent directory
+
+	Returns:
+		list[str]: Path to child directories
+	"""
+
+	children = [sub_folder for sub_folder in os.listdir(parent_dir) if os.path.isdir(os.path.join(parent_dir, sub_folder))]
+
+	return children
+
+
 def create_index():
-	storage_dir = "./flaskr/Surveys"
+	"""
+	Builds an index of the storage directory. Each element is a key:value pair consisting of Survey:[Scan 1, Scan 2, …, Scan N]
+
+	"""
+	logging.info("Building Index")
 
 	manifest_dict = {}
 
 	# get the survey folders, making sure that they are directories
-	survey_folders = [sub_folder for sub_folder in os.listdir(storage_dir) if os.path.isdir(os.path.join(storage_dir, sub_folder))]
+	survey_folders = get_children(STORAGE_DIR)
 
 	# for each survey folder get their contents and add them to the dictionary if they are also directories
 	for survey in survey_folders:
-		survey_files = [sub_folder for sub_folder in os.listdir(os.path.join(storage_dir, survey)) if os.path.isdir(os.path.join(storage_dir, survey, sub_folder))]
+		survey_files = get_children(survey)
 		manifest_dict[survey] = survey_files
 
 	# write out the manifest
-	manifest_file = os.path.join(storage_dir, "_index.csv")
+	manifest_file = os.path.join(STORAGE_DIR, "_index.csv")
 	with open(manifest_file, "w") as f:
 		for key in manifest_dict:
 			new_line = [key]
 			new_line.extend(manifest_dict[key])
 			str_line = ",".join(new_line)
 			f.write(str_line + "\n")
+
+	return
+
+
+def reprocess_database():
+	"""
+	Rebuilds HoloScans on the database
+	Returns:
+
+	"""
+	logging.info("Reprocessing Database")
+
+	survey_paths = get_children(STORAGE_DIR)
+	for survey_path in survey_paths:
+		scan_paths = get_children(survey_path)
+		for scan_path in scan_paths:
+			# check that there is a FILE and PATH file in the scan directory
+			dzt_exists = any([file.startswith("FILE") for file in os.listdir(scan_path)])
+			csv_exists = any([file.startswith("PATH") for file in os.listdir(scan_path)])
+			if dzt_exists and csv_exists:
+				create_resources.create_resources(scan_path)
 
 	return
 
@@ -67,7 +109,7 @@ def create_app(test_config=None):
 	@app.route('/hello')
 	def hello():
 		return 'Hello, World'
-	
+
 	# Route/URL Pattern for main folder download. Applies only to _index.csv
 	@app.route('/Surveys/<name>')
 	def download_file(name):
@@ -81,7 +123,7 @@ def create_app(test_config=None):
 	@app.route('/Surveys/<survey>/<scan>/<file_name>')
 	def new_download_file(survey, scan, file_name):
 		return send_from_directory(app.config["UPLOAD_FOLDER"], f"{survey}/{scan}/{file_name}")
-	
+
 	app.add_url_rule('/Surveys/<survey>/<scan>/<file_name>', endpoint="download_file", build_only=True)
 
 	# Most of this function is way more specific than it should be. But it does function
@@ -117,7 +159,7 @@ def create_app(test_config=None):
 
 				folder = f'./flaskr/Surveys/{components[0]}/{components[1]}'
 				ready_to_process = (any([content.startswith("FILE") for content in os.listdir(folder)]) and
-								   any([content.startswith("PATH") for content in os.listdir(folder)]))
+									any([content.startswith("PATH") for content in os.listdir(folder)]))
 				if ready_to_process:
 					print("Creating Resources")
 					create_resources.create_resources(folder)

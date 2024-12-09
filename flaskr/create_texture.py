@@ -1,7 +1,46 @@
 import numpy as np
 import numpy.ma as ma
 
-# Global Values (Maybe Can be played with via some web interface)
+
+"""
+    HoloScan texture generation code for use with the HoloScan Server. Some functions are borrowed
+    from the GPRPy package and used with stylistic changes.
+    
+    Author: Scott Tanch
+"""
+
+""" 
+    #### ------------------------------------ Texture Creation ------------------------------------ #### 
+        
+        # Step 1: Reading and Basic Processing
+            # 1.1 Read in DZT file
+            # 1.2 Perform some kind of bandpass filtering
+            # 1.3 Apply some gain function, either linear or an adaptive gain from GPRPy
+            # 1.4 Background Removal, either mean, svd, or windowed mean from GPRPy
+            # 1.5 Return the processed array
+        # Step 2: Create the standard Texture
+            # 2.1 Read in array
+            # 2.2 Flip LR
+            # 2.3 hstack flipped, orignal
+            # 2.4 return standard texture
+        # Step 3: Create Reduced Transparent Texture
+            # 3.1 Read in array
+            # 3.2 Normalize array
+            # 3.3 Create a masked array, where values below a threshold are invalid
+                # Instead of thresholding maybe I could do the areas where the value changes quickly? More like edges?
+                # Worth looking into but im not sure that gets me anything
+            # 3.4 Create a masked ones like from the masked array
+            # 3.5 Create a binary array by filling the masked ones with zeros
+            # 3.6 Multiply the binary array by the appropriate color values (purely aestetic)
+            # 3.7 Depth stack the 3 color channels with the Alpha channel
+            # 3.8 Flip LR
+            # 3.9 hstack flipped, orig
+            # 3.10 return the reduced transparent texture (rtt)
+        # Step 4: Return textures, to be saved by the create resource wrapper
+
+"""
+
+""" #### --------------------------------------- Global Vars -------------------------------------- #### """
 smoothing_window = 5        # Window to smooth trace over (samples)
 dewow_window = 10           # Window to dewow trace over (samples)
 bg_window = 2.5             # Window to average scan over (meters)
@@ -12,8 +51,9 @@ blu_val = 0                 # Blue channel value [0:1] (unitless)
 grn_val = 0                 # Green channel value [0:1] (unitless)
 
 
-# Functions Taken from GPRPy (gprpyTools.py) Need to figure out how to cite these a little better
-# I've made stylistic changes but the functions are the same
+""" #### ------------------------------------- GPRPy Functions ------------------------------------ #### """
+
+
 def dewow(data: np.matrix, window: int) -> np.matrix:
     """
     Subtracts from each sample along each trace an
@@ -142,7 +182,9 @@ def rem_mean_trace(data: np.matrix, ntraces: int) -> np.matrix:
     return newdata
 
 
-# Functions Written By Me
+""" #### -------------------------------------- New Functions -------------------------------------- #### """
+
+
 def get_gain(gain_points: list[float | int], samples: int, scans: int) -> np.ndarray:
     """
     Assemble a 2-Dimensional Gain Array to be applied to a B-Scan. Represents a linear range gain being applied to each
@@ -272,48 +314,3 @@ def create_textures(radar_header: dict, radar_data: list[np.ndarray[float]]) -> 
 
     return st, rtt
 
-
-def test():
-    # TODO: Given some set of DZT files make sure none of them cause a crash for some reason
-    pass
-
-# Potentially useful later
-# def bandpass(lowedge: float, highedge: float):
-#     # fs is the sample frequenc
-#     # assuming that the lowedge and high edge are comming in Hz, need to convert to rads/s
-#
-#     # start of the cutoff region freq, should be between the stopband edges
-#     passbands = [lowedge+0.1, highedge-0.1]
-#     # cut off frequencies
-#     stopbands = [lowedge, highedge]
-#     gain_stop = 60
-#     gain_pass = 0.25
-#     sos = signal.iirdesign(passbands, stopbands, gain_pass, gain_stop, ftype='butter', analog=False, output='sos', )
-#     return sos
-
-# Texture Creation Steps
-# Step 1: Reading and Basic Processing
-    # 1.1 Read in DZT file
-    # 1.2 Perform some kind of bandpass filtering
-    # 1.3 Apply some gain function, either linear or an adaptive gain from GPRPy
-    # 1.4 Background Removal, either mean, svd, or windowed mean from GPRPy
-    # 1.5 Return the processed array
-# Step 2: Create the standard Texture
-    # 2.1 Read in array
-    # 2.2 Flip LR
-    # 2.3 hstack flipped, orignal
-    # 2.4 return standard texture
-# Step 3: Create Reduced Transparent Texture
-    # 3.1 Read in array
-    # 3.2 Normalize array
-    # 3.3 Create a masked array, where values below a threshold are invalid
-        # Instead of thresholding maybe I could do the areas where the value changes quickly? More like edges?
-        # Worth looking into but im not sure that gets me anything
-    # 3.4 Create a masked ones like from the masked array
-    # 3.5 Create a binary array by filling the masked ones with zeros
-    # 3.6 Multiply the binary array by the appropriate color values (purely aestetic)
-    # 3.7 Depth stack the 3 color channels with the Alpha channel
-    # 3.8 Flip LR
-    # 3.9 hstack flipped, orig
-    # 3.10 return the reduced transparent texture (rtt)
-# Step 4: Return textures, to be saved by the create resource wrapper
