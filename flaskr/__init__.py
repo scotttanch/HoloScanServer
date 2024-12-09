@@ -1,15 +1,16 @@
 import os
 import logging
 from datetime import datetime
-from flask import Flask, flash, request, redirect, url_for
+from flask import Flask, flash, request, redirect
 from flask import send_from_directory
+from flaskr import create_resources
 
 UPLOAD_FOLDER = 'Surveys'
 ALLOWED_EXTENSIONS = {'csv', 'dzt'}
 LOG_FOLDER = 'Logs'
 time_frmt = "%y-%m-%d"
 log_file = f"./flaskr/Logs/record_{datetime.now().strftime(time_frmt)}.log"
-#logging.basicConfig(filename=log_file, level=logging.INFO, format='%(message)s')
+logging.basicConfig(filename=log_file, level=logging.INFO, format='%(message)s')
 
 
 def allowed_file(filename):
@@ -113,6 +114,16 @@ def create_app(test_config=None):
 				filename = file.filename
 
 				file.save(f"./flaskr/Surveys/{filename}")
+
+				folder = f'./flaskr/Surveys/{components[0]}/{components[1]}'
+				ready_to_process = (any([content.startswith("FILE") for content in os.listdir(folder)]) and
+								   any([content.startswith("PATH") for content in os.listdir(folder)]))
+				if ready_to_process:
+					print("Creating Resources")
+					create_resources.create_resources(folder)
+				else:
+					print("Waiting for more data")
+
 				return redirect(request.url)
 		html_string = '''<!doctype html>
 						<title>Upload new File</title>

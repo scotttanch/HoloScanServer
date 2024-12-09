@@ -1,11 +1,9 @@
 from readgssi.dzt import readdzt
-from create_texture import create_textures
+from flaskr.create_texture import create_textures
 from matplotlib.pyplot import imsave
 from pandas import read_csv
 import numpy as np
 import os
-
-#
 
 
 def parallel_curve(x_points, z_points, distance):
