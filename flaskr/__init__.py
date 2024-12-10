@@ -27,7 +27,7 @@ def get_children(parent_dir):
 		parent_dir (str): Path to parent directory
 
 	Returns:
-		list[str]: Path to child directories
+		list[str]: Path to child directory, relative to parent
 	"""
 
 	children = [sub_folder for sub_folder in os.listdir(parent_dir) if os.path.isdir(os.path.join(parent_dir, sub_folder))]
@@ -36,32 +36,30 @@ def get_children(parent_dir):
 
 
 def create_index():
-	"""
-	Builds an index of the storage directory. Each element is a key:value pair consisting of Survey:[Scan 1, Scan 2, …, Scan N]
 
-	"""
-	logging.info("Building Index")
+	logging.info("Updating Index")
 
-	manifest_dict = {}
+	index_dict = {}
 
 	# get the survey folders, making sure that they are directories
-	survey_folders = get_children(STORAGE_DIR)
+
+	survey_folders = [sub_folder for sub_folder in os.listdir(STORAGE_DIR) if os.path.isdir(os.path.join(STORAGE_DIR, sub_folder))]
 
 	# for each survey folder get their contents and add them to the dictionary if they are also directories
 	for survey in survey_folders:
-		survey_files = get_children(survey)
-		manifest_dict[survey] = survey_files
+		survey_files = [sub_folder for sub_folder in os.listdir(os.path.join(STORAGE_DIR, survey)) if os.path.isdir(os.path.join(STORAGE_DIR, survey, sub_folder))]
+		index_dict[survey] = survey_files
 
 	# write out the manifest
 	manifest_file = os.path.join(STORAGE_DIR, "_index.csv")
 	with open(manifest_file, "w") as f:
-		for key in manifest_dict:
+		for key in index_dict:
 			new_line = [key]
-			new_line.extend(manifest_dict[key])
+			new_line.extend(index_dict[key])
 			str_line = ",".join(new_line)
 			f.write(str_line + "\n")
 
-	return
+	return index_dict
 
 
 def reprocess_database():
@@ -72,15 +70,17 @@ def reprocess_database():
 	"""
 	logging.info("Reprocessing Database")
 
-	survey_paths = get_children(STORAGE_DIR)
-	for survey_path in survey_paths:
-		scan_paths = get_children(survey_path)
-		for scan_path in scan_paths:
-			# check that there is a FILE and PATH file in the scan directory
-			dzt_exists = any([file.startswith("FILE") for file in os.listdir(scan_path)])
-			csv_exists = any([file.startswith("PATH") for file in os.listdir(scan_path)])
+	# start off by updating the index
+	index = create_index()
+
+	for survey in index.keys():
+		scans = index[survey]
+		for scan in scans:
+			scan_folder = os.path.join(STORAGE_DIR, survey, scan)
+			dzt_exists = any(contents.startswith("FILE") for contents in os.listdir(scan_folder))
+			csv_exists = any(contents.startswith("PATH") for contents in os.listdir(scan_folder))
 			if dzt_exists and csv_exists:
-				create_resources.create_resources(scan_path)
+				create_resources.create_resources(scan_folder)
 
 	return
 
@@ -92,8 +92,6 @@ def create_app(test_config=None):
 		SECRET_KEY='dev',
 		DATABASE=os.path.join(app.instance_path, 'flaskr.sqlite')
 	)
-
-	create_index()
 
 	if test_config is None:
 		app.config.from_pyfile('config.py', silent=True)
@@ -114,7 +112,7 @@ def create_app(test_config=None):
 	@app.route('/Surveys/<name>')
 	def download_file(name):
 		if name == '_index.csv':
-			create_index()
+			_ = create_index()
 		return send_from_directory(app.config["UPLOAD_FOLDER"], name)
 
 	app.add_url_rule('/Surveys/<name>', endpoint="download_file", build_only=True)
@@ -158,9 +156,9 @@ def create_app(test_config=None):
 				file.save(f"./flaskr/Surveys/{filename}")
 
 				folder = f'./flaskr/Surveys/{components[0]}/{components[1]}'
-				ready_to_process = (any([content.startswith("FILE") for content in os.listdir(folder)]) and
-									any([content.startswith("PATH") for content in os.listdir(folder)]))
-				if ready_to_process:
+				dzt_exists = any([content.startswith("FILE") for content in os.listdir(folder)])
+				csv_exists = any([content.startswith("PATH") for content in os.listdir(folder)])
+				if dzt_exists and csv_exists:
 					print("Creating Resources")
 					create_resources.create_resources(folder)
 				else:
