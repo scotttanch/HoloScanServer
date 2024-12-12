@@ -50,8 +50,8 @@ threshold = 0.60            # Minimum value to retain opacity (unitless)
 red_val = 1                 # Red channel value [0:1] (unitless)
 blu_val = 0                 # Blue channel value [0:1] (unitless)
 grn_val = 0                 # Green channel value [0:1] (unitless)
-brd_red = 1                 # Red channel value for the border [0:1] (unitless)
-brd_grn = 0                 # Green channel value for the border [0:1] (unitless)
+brd_red = 0                 # Red channel value for the border [0:1] (unitless)
+brd_grn = 1                 # Green channel value for the border [0:1] (unitless)
 brd_blu = 0                 # Blue channel value for the border [0:1] (unitless)
 brd_width = 5               # Border Width for rtt and empty textures (pixels)
 brd_size = 1000             # Edge dimension of the empty texture (pixels)
@@ -308,6 +308,7 @@ def create_rtt(data: np.ndarray) -> np.ndarray:
                 final[i, j, 0] = empty[i, j, 0]
                 final[i, j, 1] = empty[i, j, 1]
                 final[i, j, 2] = empty[i, j, 2]
+                final[i, j, 3] = 1
 
     return final
 

@@ -182,7 +182,7 @@ def read_position_data(file):
     # TODO: This needs to be updated everytime I change how data is saved by the HardPack itself
     # csvs on the server are currently just x, y, z (RS Frame) -> x, z, y (Unity Frame)
     df = read_csv(file, header=None)
-    xs, ys, zs = reduce_resolution(df[0].to_list(), df[2].to_list(), df[1].to_list(), resolution=0.001, endpoint=True)
+    xs, ys, zs = reduce_resolution(df[0].to_list(), df[2].to_list(), df[1].to_list(), resolution=0.05, endpoint=True)
     return xs, ys, zs
 
 
