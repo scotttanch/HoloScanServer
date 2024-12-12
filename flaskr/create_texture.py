@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.ma as ma
 
@@ -49,7 +50,11 @@ threshold = 0.60            # Minimum value to retain opacity (unitless)
 red_val = 1                 # Red channel value [0:1] (unitless)
 blu_val = 0                 # Blue channel value [0:1] (unitless)
 grn_val = 0                 # Green channel value [0:1] (unitless)
-
+brd_red = 1                 # Red channel value for the border [0:1] (unitless)
+brd_grn = 0                 # Green channel value for the border [0:1] (unitless)
+brd_blu = 0                 # Blue channel value for the border [0:1] (unitless)
+brd_width = 5               # Border Width for rtt and empty textures (pixels)
+brd_size = 1000             # Edge dimension of the empty texture (pixels)
 
 """ #### ------------------------------------- GPRPy Functions ------------------------------------ #### """
 
@@ -289,6 +294,51 @@ def create_rtt(data: np.ndarray) -> np.ndarray:
     # flip and stack the RGBA image with its original
     final = np.hstack((np.fliplr(rgba_im), rgba_im))
 
+    # Before we return the final image, we want to add a border around the edge
+
+    # create a empty texture of the same size as the final
+    empty = create_empty(np.shape(r_channel), border_width=brd_width)
+
+    # Loop over the empty image
+    for i in range(np.shape(empty)[0]):
+        for j in range(np.shape(empty)[1]):
+            # if pixel i,j is opaque in empty, set pixel i,j in final to be the color of empty
+            # This has the effect of layering the empty texture ontop of the reduced.
+            if empty[i, j, 3] == 1:
+                final[i, j, 0] = empty[i, j, 0]
+                final[i, j, 1] = empty[i, j, 1]
+                final[i, j, 2] = empty[i, j, 2]
+
+    return final
+
+
+def create_empty(dimension, border_width):
+    """
+    Generates a square transparent texture with a border with color defined by the global rgb values
+    Args:
+        dimension (tuple[int, int]): height and width of the texture in pixels
+        border_width (int): width of the border in pixels
+
+    Returns:
+        (np.ndarray):
+    """
+
+    height = dimension[0]
+    width = dimension[1]
+
+    # start with the rgb layers
+    r_channel = np.full((height, width), brd_red, dtype=float)
+    b_channel = np.full((height, width), brd_blu, dtype=float)
+    g_channel = np.full((height, width), brd_grn, dtype=float)
+
+    a_channel = np.full((height, width), 1, dtype=float)
+
+    for i in range(border_width, height-border_width):
+        for j in range(border_width, width-border_width):
+            a_channel[i, j] = 0
+
+    single = np.dstack([r_channel, g_channel, b_channel, a_channel])
+    final = np.hstack((np.fliplr(single), single))
     return final
 
 
@@ -313,4 +363,3 @@ def create_textures(radar_header: dict, radar_data: list[np.ndarray[float]]) -> 
     rtt = create_rtt(data)
 
     return st, rtt
-
