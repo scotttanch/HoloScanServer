@@ -233,7 +233,7 @@ def backproject(header, scan, resolution, ps):
     # 3.3 Extract individual traces from the total scan and zip together with their cordinates
     traces = [bg_scan[:, num] for num in range(num_traces)]
     trace_loc = list(zip(traces, zip(xks, yks, zks)))
-    # TODO: In the parallel case, well change this to be batch[core_number]
+
     # batches = list(batched(trace_loc, comm.get_size()))
 
     # So this is where the parallel stuff would happen, each core gets the same copy of domain and image array
@@ -311,7 +311,7 @@ def backproject_mp(header, scan, resolution, ps):
         traces = [bg_scan[:, num] for num in range(num_traces)]
         trace_loc = list(zip(traces, zip(xks, yks, zks)))
         batches = list(batched(trace_loc, comm.Get_size()))
-        # TODO: In the parallel case, well change this to be batch[core_number]
+
 
     else:
         domain = None
