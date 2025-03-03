@@ -30,6 +30,8 @@ def get_children(parent_dir):
 		list[str]: Path to child directory, relative to parent
 	"""
 
+	# This can be simplified by the os.scandir() function
+
 	children = [sub_folder for sub_folder in os.listdir(parent_dir) if os.path.isdir(os.path.join(parent_dir, sub_folder))]
 
 	return children
