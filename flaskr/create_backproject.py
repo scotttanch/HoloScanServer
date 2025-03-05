@@ -9,8 +9,6 @@ import numpy as np
 from numpy import sqrt
 from mpi4py import MPI
 from path_tools import reduce_resolution, interpolate_domain
-import tqdm
-
 
 C = 2.99792458 * 10 ** 8
 
@@ -171,184 +169,8 @@ def background_removal(scan):
     return scan
 
 
-def backproject(header, scan, resolution, ps):
-    """
-    Performs backprojection on a scan
-
-    Args:
-        header (dict):
-        scan (np.ndarray):
-        resolution:
-        ps (tuple[list[float], list[float], list[float]]): points constructing the scan line
-    Returns:
-
-    """
-
-    # 0. Get Information about the scan from the header and scan itself
-
-    num_samples, num_traces = np.shape(scan)
-    epsr = header['rhf_epsr']
-    t_max = header['rhf_range'] * 10**-9
-    depth = header['rhf_depth']
-
-    # 1. Obtain a set of antenna positions along the scan line
-    xks, yks, zks = get_positions(*ps, num_traces=num_traces, spm=header['rhf_spm'])
-
-    # 2. Prepare the Image domain
-    # 2.1 Interpolate the path to the desired image resolution
-    domain_x, domain_y, domain_z = interpolate_domain(*ps, resolution)
-
-    # 2.2 Find the number of points in the depth direction
-    z_size = int(depth/resolution)
-
-    # 2.3 for each point on the surface, construct a column vector extending from the surface to the maximum depth
-    cols = []
-    for index in range(len(domain_x)):
-        surface = domain_z[index]
-        subsurface = surface - depth
-        z_range = np.linspace(surface, subsurface, z_size, endpoint=True)
-        x_range = [domain_x[index] for _ in z_range]
-        y_range = [domain_y[index] for _ in z_range]
-        col = np.array(list(zip(x_range, y_range, z_range)), dtype="f,f,f")
-        cols.append(col)
-
-    # 2.4 Stack the column vectors together to create the image domain, Transposed so that the xy cordinate for each column is the same
-    domain = np.vstack(cols)
-    domain = domain.T
-    domain_shape = np.shape(domain)  # doing this because np.shape(domain) pisses me off
-
-    # 2.5 Create the image in the same shape as the cordinate domain
-    image = np.zeros_like(domain, dtype=float)
-
-    # 3 Process Traces
-    # 3.1 find the time zero correction as the time of the first negative peak
-    avg_trace = np.mean(scan, axis=1)
-    threshold = np.min(avg_trace)
-    index = [i for i, v in enumerate(avg_trace) if v <= threshold][0]
-    correction = t_max / num_samples * index
-
-    # 3.2 Perform an svd background removal
-    bg_scan = background_removal(scan)
-
-    # 3.3 Extract individual traces from the total scan and zip together with their cordinates
-    traces = [bg_scan[:, num] for num in range(num_traces)]
-    trace_loc = list(zip(traces, zip(xks, yks, zks)))
-
-    # batches = list(batched(trace_loc, comm.get_size()))
-
-    # So this is where the parallel stuff would happen, each core gets the same copy of domain and image array
-    # except instead of iterating over trace_loc each core would iterate over batches[rank] and then the root will
-    # add the domains back together element wise
-
-    for i in tqdm.tqdm(range(domain_shape[0])):
-        for j in range(domain_shape[1]):
-            x0, y0, z0 = domain[i][j]
-            for trace, pk in trace_loc:
-                time = travel_time(pk, (x0, y0, z0), epsr)
-                value = traces_lookup(trace, time, t_max, correction)
-                image[i][j] = image[i][j] + value
-
-    plt.imshow(image)
-    plt.show()
-
-    return image
-
-
-def backproject_mp(header, scan, resolution, ps):
-
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
-
-    if rank == 0:
-        # 0. Get Information about the scan from the header and scan itself
-
-        num_samples, num_traces = np.shape(scan)
-        epsr = header['rhf_epsr']
-        t_max = header['rhf_range'] * 10 ** -9
-        depth = header['rhf_depth']
-
-        # 1. Obtain a set of antenna positions along the scan line
-        xks, yks, zks = get_positions(*ps, num_traces=num_traces, spm=header['rhf_spm'])
-
-        # 2. Prepare the Image domain
-        # 2.1 Interpolate the path to the desired image resolution
-        domain_x, domain_y, domain_z = interpolate_domain(*ps, resolution)
-
-        # 2.2 Find the number of points in the depth direction
-        z_size = int(depth / resolution)
-
-        # 2.3 for each point on the surface, construct a column vector extending from the surface to the maximum depth
-        cols = []
-        for index in range(len(domain_x)):
-            surface = domain_z[index]
-            subsurface = surface - depth
-            z_range = np.linspace(surface, subsurface, z_size, endpoint=True)
-            x_range = [domain_x[index] for _ in z_range]
-            y_range = [domain_y[index] for _ in z_range]
-            col = np.array(list(zip(x_range, y_range, z_range)), dtype="f,f,f")
-            cols.append(col)
-
-        # 2.4 Stack the column vectors together to create the image domain, Transposed so that the xy cordinate for each column is the same
-        domain = np.vstack(cols)
-        domain = domain.T
-        domain_shape = np.shape(domain)  # doing this because np.shape(domain) pisses me off
-
-        # 2.5 Create the image in the same shape as the cordinate domain
-        image = np.zeros_like(domain, dtype=float)
-
-        # 3 Process Traces
-        # 3.1 find the time zero correction as the time of the first negative peak
-        avg_trace = np.mean(scan, axis=1)
-        threshold = np.min(avg_trace)
-        index = [i for i, v in enumerate(avg_trace) if v <= threshold][0]
-        correction = t_max / num_samples * index
-
-        # 3.2 Perform an svd background removal
-        bg_scan = background_removal(scan)
-
-        # 3.3 Extract individual traces from the total scan and zip together with their cordinates
-        traces = [bg_scan[:, num] for num in range(num_traces)]
-        trace_loc = list(zip(traces, zip(xks, yks, zks)))
-        batches = list(batched(trace_loc, comm.Get_size()))
-
-
-    else:
-        domain = None
-        image = None
-        batch = None
-
-    domain = comm.bcast(domain, root=0)
-    image = comm.bcast(image, root=0)
-
-    batch = comm.scatter(batches, root=0)
-
-    for i in tqdm.tqdm(range(domain_shape[0])):
-        for j in range(domain_shape[1]):
-            x0, y0, z0 = domain[i][j]
-            for trace, pk in batch:
-                time = travel_time(pk, (x0, y0, z0), epsr)
-                value = traces_lookup(trace, time, t_max, correction)
-                image[i][j] = image[i][j] + value
-
-    data = comm.gather(image, root=0)
-
-    if rank == 0:
-        final = np.zeros_like(image)
-        # sum the cells of the image element wise
-        for each in data:
-            final = np.add(final, each)
-
-    return final
-
-
-def test():
-    file = './Testing/FILE____080.DZT'
-    header, data, _ = readdzt(file)
-    ps = read_raw_path("./Testing/PATH____081.csv")
-    rps = reduce_resolution(*ps, resolution=0.05, mean=False, endpoint=True)
-    backproject(header, data[0], ps=rps, resolution=0.05)
-    return
+def override_exists():
+    return True
 
 
 def main():
@@ -365,7 +187,6 @@ def main():
         img_file = (sys.argv[3])
         resolution = float(sys.argv[4])
 
-
         header, data, _ = readdzt(dzt_file)
 
         scan = data[0]
@@ -376,7 +197,12 @@ def main():
         # 0. Get Information about the scan from the header and scan itself
 
         num_samples, num_traces = np.shape(scan)
-        epsr = header['rhf_epsr']
+
+        if override_exists():
+            epsr = 10
+        else:
+            epsr = header['rhf_epsr']
+
         t_max = header['rhf_range'] * 10 ** -9
         depth = header['rhf_depth']
 
@@ -385,7 +211,7 @@ def main():
 
         # 2. Prepare the Image domain
         # 2.1 Interpolate the path to the desired image resolution
-        domain_x, domain_y, domain_z = interpolate_domain(*ps, 0.01)
+        domain_x, domain_y, domain_z = interpolate_domain(*ps, resolution=0.01)
 
         # 2.2 Find the number of points in the depth direction
         z_size = int(depth / resolution)
@@ -427,7 +253,6 @@ def main():
         domain = None
         image = None
         batches = None
-        trace_loc = None
         epsr = None
         t_max = None
         correction = None
@@ -457,11 +282,17 @@ def main():
         for each in image:
             final = np.add(final, each)
 
+        # normalize image
+        max_val = np.max(final, axis=None)
+        min_val = np.min(final, axis=None)
+        final = final + abs(min_val)
+        final = np.divide(final, (max_val - min_val))
+
         final = np.hstack((np.fliplr(final), final))
         plt.imsave(img_file, final)
+
         elapsed = (monotonic()-start)/60
         print(f"Projection time for comm size {size}: {elapsed} min")
-        print(f"Image Size {domain_shape[0]}x{domain_shape[1]}")
 
     return
 
