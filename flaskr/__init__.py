@@ -82,6 +82,7 @@ def reprocess_database():
 			dzt_exists = any(contents.startswith("FILE") for contents in os.listdir(scan_folder))
 			csv_exists = any(contents.startswith("PATH") for contents in os.listdir(scan_folder))
 			if dzt_exists and csv_exists:
+				logging.info(f"Processing {survey} {scan}")
 				create_resources.create_resources(scan_folder)
 
 	return
