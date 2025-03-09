@@ -95,6 +95,7 @@ def create_app(test_config=None):
 		SECRET_KEY='dev',
 		DATABASE=os.path.join(app.instance_path, 'flaskr.sqlite')
 	)
+	# TODO: Make this a multithreading thing
 	reprocess_database()
 	if test_config is None:
 		app.config.from_pyfile('config.py', silent=True)
@@ -163,6 +164,7 @@ def create_app(test_config=None):
 				csv_exists = any([content.startswith("PATH") for content in os.listdir(folder)])
 				if dzt_exists and csv_exists:
 					print("Creating Resources")
+					# TODO: Make this a multithreading thing
 					create_resources.create_resources(folder)
 				else:
 					print("Waiting for more data")

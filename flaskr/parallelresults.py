@@ -20,10 +20,13 @@ for file in data_files:
     frame = pd.read_csv(file, skipfooter=1, engine='python')
     vals = []
     stds = []
+    cores = []
     for core_count in frame.cores.unique():
+        if core_count > 8:
+            break
         vals.append(frame.loc[frame.cores == core_count].time.mean())
         stds.append(frame.loc[frame.cores == core_count].time.std())
-
+        cores.append(core_count)
     with open(file, 'r') as f:
         line = f.readlines()[-1]
     system_info = line.split(',')
@@ -32,7 +35,7 @@ for file in data_files:
     legend.append(proc)
 
     #ax.plot(list(frame.cores.unique()), vals, marker=marker_line[len(legend)-1][0], linestyle=marker_line[len(legend)-1][1])
-    ax.errorbar(list(frame.cores.unique()), vals, yerr=stds,
+    ax.errorbar(cores, vals, yerr=stds,
                 ecolor='black', barsabove=False, capsize=5,
                 marker=marker_line[len(legend)-1][0], linestyle=marker_line[len(legend)-1][1])
 

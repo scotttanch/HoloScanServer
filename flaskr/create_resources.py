@@ -32,6 +32,8 @@ from path_tools import reduce_resolution, parallel_curve
         
 """
 
+MAX_PROC = 4
+
 
 def read_position_data(file):
     """
@@ -155,8 +157,6 @@ def create_resources(folder_path):
         folder_path (str): path to the folder being processed
 
     """
-    MAX_PROC = 6
-    RES = 0.005
 
     # extract the scan number from folder_path
     scan_number = folder_path.rsplit(os.sep, maxsplit=1)[1]

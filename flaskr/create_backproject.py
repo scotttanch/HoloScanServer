@@ -211,7 +211,7 @@ def main():
 
         # 2. Prepare the Image domain
         # 2.1 Interpolate the path to the desired image resolution
-        domain_x, domain_y, domain_z = interpolate_domain(*ps, resolution=0.01)
+        domain_x, domain_y, domain_z = interpolate_domain(*ps, resolution=resolution)
 
         # 2.2 Find the number of points in the depth direction
         z_size = int(depth / resolution)
@@ -287,12 +287,11 @@ def main():
         min_val = np.min(final, axis=None)
         final = final + abs(min_val)
         final = np.divide(final, (max_val - min_val))
-
         final = np.hstack((np.fliplr(final), final))
         plt.imsave(img_file, final)
 
         elapsed = (monotonic()-start)/60
-        print(f"Projection time for comm size {size}: {elapsed} min")
+        print(f"{size},{resolution},{elapsed}")
 
     return
 
