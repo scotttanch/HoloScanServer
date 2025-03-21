@@ -6,7 +6,7 @@ from pandas import read_csv
 from readgssi.dzt import readdzt
 
 from flaskr.create_texture import create_textures
-from path_tools import reduce_resolution, parallel_curve
+from flaskr.path_tools import reduce_resolution, parallel_curve
 
 """
     HoloScan object generation code for use with the HoloScan Server
@@ -183,16 +183,16 @@ def create_resources(folder_path):
     positions = read_position_data(positon_path)
 
     # Create the standard and reduced texture (only radar data dependant)
-    print("Creating Tectures")
+    
     standard, reduced = create_textures(header, data)
     abs_dzt = os.path.abspath(dzt_path)
     abs_csv = os.path.abspath(positon_path)
     abs_png = os.path.abspath(bp_texture_path)
     proc = MAX_PROC
     resolution = 0.01
-    print("Back Projecting")
-    os.system(f"mpiexec -n {proc} python create_backproject.py {abs_dzt} {abs_csv} {abs_png} {resolution}")
-    print("Back Projection Done")
+    
+    os.system(f"mpiexec -n {proc} python flaskr/create_backproject.py {abs_dzt} {abs_csv} {abs_png} {resolution}")
+    
     # dzt_file and csv_file must be absolute paths
     # so os.path.abspath(dzt_path)
     # os.path.abspath(csv_path)
@@ -221,5 +221,3 @@ def create_resources(folder_path):
 def test():
     create_resources("Testing\\081")
 
-
-test()

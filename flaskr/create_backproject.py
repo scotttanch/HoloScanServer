@@ -168,7 +168,7 @@ def background_removal(scan):
 
     return scan
 
-
+# TODO: Update this to check for a property override file in the scan folder
 def override_exists():
     return True
 
@@ -287,11 +287,15 @@ def main():
         min_val = np.min(final, axis=None)
         final = final + abs(min_val)
         final = np.divide(final, (max_val - min_val))
+        
+        # TODO: Make this work like the reduced texture
+        # Instead of normalizing, make final = abs(final) so the top and bottom of targets gets blurred into one cell?
+        
         final = np.hstack((np.fliplr(final), final))
         plt.imsave(img_file, final)
-
+        
         elapsed = (monotonic()-start)/60
-        print(f"{size},{resolution},{elapsed}")
+        #print(f"{size},{resolution},{elapsed}")
 
     return
 
