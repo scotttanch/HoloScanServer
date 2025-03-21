@@ -96,7 +96,9 @@ def create_app(test_config=None):
 		DATABASE=os.path.join(app.instance_path, 'flaskr.sqlite')
 	)
 	# TODO: Make this a multithreading thing
-	reprocess_database()
+	# proc_thread = threading.Thread(reprocess_database)
+	# proc_thread.start()
+	# reprocess_database()
 	if test_config is None:
 		app.config.from_pyfile('config.py', silent=True)
 	else:
@@ -163,9 +165,12 @@ def create_app(test_config=None):
 				dzt_exists = any([content.startswith("FILE") for content in os.listdir(folder)])
 				csv_exists = any([content.startswith("PATH") for content in os.listdir(folder)])
 				if dzt_exists and csv_exists:
-					print("Creating Resources")
+					print(f"Creating Resources for {filename}")
 					# TODO: Make this a multithreading thing
+					# rec_thread = threading.Thread(target=create_resources.create_resources, args=(folder,))
+					# rec_thread.start()
 					create_resources.create_resources(folder)
+					
 				else:
 					print("Waiting for more data")
 
