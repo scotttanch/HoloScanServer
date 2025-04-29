@@ -98,7 +98,7 @@ def create_app(test_config=None):
 	# TODO: Make this a multithreading thing
 	# proc_thread = threading.Thread(reprocess_database)
 	# proc_thread.start()
-	# reprocess_database()
+	reprocess_database()
 	if test_config is None:
 		app.config.from_pyfile('config.py', silent=True)
 	else:

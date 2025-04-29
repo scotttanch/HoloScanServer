@@ -179,7 +179,7 @@ def create_resources(folder_path):
         raise FileNotFoundError("Position File Not Found")
 
     # Extract radar and position data
-    header, data, _ = readdzt(dzt_path)
+    header, data, _ = readdzt(dzt_path, espr=10)
     positions = read_position_data(positon_path)
 
     # Create the standard and reduced texture (only radar data dependant)
