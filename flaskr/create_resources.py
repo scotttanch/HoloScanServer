@@ -144,6 +144,10 @@ def create_geometry(x_points, y_points, z_points, depth):
 
     return verts, tris, uvs
 
+# TODO: Update this to check for a property override file in the scan folder
+def override_exists():
+    return True
+
 
 def create_resources(folder_path):
     """
@@ -178,8 +182,12 @@ def create_resources(folder_path):
     if not os.path.exists(positon_path):
         raise FileNotFoundError("Position File Not Found")
 
+    
     # Extract radar and position data
-    header, data, _ = readdzt(dzt_path, espr=10)
+    if override_exists():
+        header, data, _ = readdzt(dzt_path, epsr=11.0)
+    else:
+        header, data, _ = readdzt(dzt_path)
     positions = read_position_data(positon_path)
 
     # Create the standard and reduced texture (only radar data dependant)

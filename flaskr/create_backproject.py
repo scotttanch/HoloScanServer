@@ -187,8 +187,12 @@ def main():
         img_file = (sys.argv[3])
         resolution = float(sys.argv[4])
 
-        header, data, _ = readdzt(dzt_file)
-
+        
+        if override_exists():
+            header, data, _ = readdzt(dzt_file, epsr=10)
+        else:
+            header, data, _ = readdzt(dzt_file)
+            
         scan = data[0]
 
         _ps = read_raw_path(csv_file)
@@ -198,11 +202,7 @@ def main():
 
         num_samples, num_traces = np.shape(scan)
 
-        if override_exists():
-            epsr = 10
-        else:
-            epsr = header['rhf_epsr']
-
+        epsr = header['rhf_epsr']
         t_max = header['rhf_range'] * 10 ** -9
         depth = header['rhf_depth']
 
@@ -266,6 +266,8 @@ def main():
 
     domain_shape = np.shape(domain)
     batch = batches[rank]
+    # TODO: try reshaping the domain and image so were interati--+ng over a single row? 
+    # shouldnt reduce complexity but might be better optimized?
     for i in range(domain_shape[0]):
         for j in range(domain_shape[1]):
             x0, y0, z0 = domain[i][j]

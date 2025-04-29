@@ -13,6 +13,7 @@ time_frmt = "%y-%m-%d"
 log_file = f"./flaskr/Logs/record_{datetime.now().strftime(time_frmt)}.log"
 logging.basicConfig(filename=log_file, level=logging.INFO, format='%(message)s')
 
+# TODO: see about making the server shutdown and restart periodically. might need to do this in bash
 
 def allowed_file(filename):
 	allowed = '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -99,6 +100,7 @@ def create_app(test_config=None):
 	# proc_thread = threading.Thread(reprocess_database)
 	# proc_thread.start()
 	reprocess_database()
+	
 	if test_config is None:
 		app.config.from_pyfile('config.py', silent=True)
 	else:
