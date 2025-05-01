@@ -11,7 +11,17 @@ from mpi4py import MPI
 from path_tools import reduce_resolution, interpolate_domain
 
 C = 2.99792458 * 10 ** 8
+bin_threshold = 0.5         # Minimum value to retain opacity (unitless)
+red_val = 1                 # Red channel value [0:1] (unitless)
+blu_val = 0                 # Blue channel value [0:1] (unitless)
+grn_val = 0                 # Green channel value [0:1] (unitless)
+brd_red = 0                 # Red channel value for the border [0:1] (unitless)
+brd_grn = 1                 # Green channel value for the border [0:1] (unitless)
+brd_blu = 0                 # Blue channel value for the border [0:1] (unitless)
+brd_width = 2               # Border Width for rtt and empty textures (pixels)
 
+brd_color = [21/255, 71/255, 52/255]
+int_color = [255/255, 209/255, 0] 
 
 def batched(iterable, n, *, strict=False):
     # batched('ABCDEFG', 3) → ABC DEF G
@@ -173,6 +183,36 @@ def override_exists():
     return True
 
 
+def create_empty(dimension, border_width):
+    """
+    Generates a square transparent texture with a border with color defined by the global rgb values
+    Args:
+        dimension (tuple[int, int]): height and width of the texture in pixels
+        border_width (int): width of the border in pixels
+
+    Returns:
+        (np.ndarray):
+    """
+
+    height = dimension[0]
+    width = dimension[1]
+
+    # start with the rgb layers
+    r_channel = np.full((height, width), brd_color[0], dtype=float)
+    b_channel = np.full((height, width), brd_color[2], dtype=float)
+    g_channel = np.full((height, width), brd_color[1], dtype=float)
+
+    a_channel = np.full((height, width), 1, dtype=float)
+
+    for i in range(border_width, height-border_width):
+        for j in range(border_width, width-border_width):
+            a_channel[i, j] = 0
+
+    single = np.dstack([r_channel, g_channel, b_channel, a_channel])
+    final = np.hstack((np.fliplr(single), single))
+    return final
+
+
 def main():
 
     comm = MPI.COMM_WORLD
@@ -181,7 +221,6 @@ def main():
 
     if rank == 0:
 
-        start = monotonic()
         dzt_file = (sys.argv[1])
         csv_file = (sys.argv[2])
         img_file = (sys.argv[3])
@@ -192,7 +231,7 @@ def main():
             header, data, _ = readdzt(dzt_file, epsr=10)
         else:
             header, data, _ = readdzt(dzt_file)
-            
+
         scan = data[0]
 
         _ps = read_raw_path(csv_file)
@@ -279,26 +318,51 @@ def main():
     image = comm.gather(image, root=0)
 
     if rank == 0:
-        final = np.zeros_like(image[0])
+        data = np.zeros_like(image[0])
         # sum the cells of the image element wise
         for each in image:
-            final = np.add(final, each)
+            data = np.add(data, each)
 
+        # make everything absolute val so we get the top and bottom of targets
+        bp_img = np.abs(data)
+        
         # normalize image
-        max_val = np.max(final, axis=None)
-        min_val = np.min(final, axis=None)
-        final = final + abs(min_val)
-        final = np.divide(final, (max_val - min_val))
-        
-        # TODO: Make this work like the reduced texture
-        # Instead of normalizing, make final = abs(final) so the top and bottom of targets gets blurred into one cell?
-        
-        final = np.hstack((np.fliplr(final), final))
-        plt.imsave(img_file, final)
-        
-        elapsed = (monotonic()-start)/60
-        #print(f"{size},{resolution},{elapsed}")
+        max_val = np.max(bp_img, axis=None)
+        min_val = np.min(bp_img, axis=None)
 
+        bp_img = np.divide(bp_img, max_val)
+      
+        # TODO: Make this work like the reduced texture
+        # Instead of normalizing, make bp_img = abs(bp_img) so the top and bottom of targets gets blurred into one cell?
+        
+        # create a masked array where only the vals above the threshold are saved
+        mask: np.ma.masked_array = np.ma.masked_less(bp_img, bin_threshold)
+        
+        ones = np.ones_like(mask)
+
+        bin_image = np.ma.filled(ones, 0)
+
+        r_channel = bin_image * np.full_like(bin_image, int_color[0])
+        g_channel = bin_image * np.full_like(bin_image, int_color[1])
+        b_channel = bin_image * np.full_like(bin_image, int_color[2])
+
+        rgba_img = np.dstack([r_channel, g_channel, b_channel, bin_image])
+        final = np.hstack((np.fliplr(rgba_img), rgba_img))
+
+        empty = create_empty(np.shape(r_channel), border_width=brd_width)
+
+        # Loop over the empty image
+        for i in range(np.shape(empty)[0]):
+            for j in range(np.shape(empty)[1]):
+                # if pixel i,j is opaque in empty, set pixel i,j in final to be the color of empty
+                # This has the effect of layering the empty texture ontop of the reduced.
+                if empty[i, j, 3] == 1:
+                    final[i, j, 0] = empty[i, j, 0]
+                    final[i, j, 1] = empty[i, j, 1]
+                    final[i, j, 2] = empty[i, j, 2]
+                    final[i, j, 3] = 1
+    
+        plt.imsave(img_file, final)
     return
 
 

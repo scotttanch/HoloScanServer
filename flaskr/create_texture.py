@@ -53,8 +53,12 @@ grn_val = 0                 # Green channel value [0:1] (unitless)
 brd_red = 0                 # Red channel value for the border [0:1] (unitless)
 brd_grn = 1                 # Green channel value for the border [0:1] (unitless)
 brd_blu = 0                 # Blue channel value for the border [0:1] (unitless)
-brd_width = 5               # Border Width for rtt and empty textures (pixels)
+brd_width = 2               # Border Width for rtt and empty textures (pixels)
 brd_size = 1000             # Edge dimension of the empty texture (pixels)
+
+brd_color = [21/255, 71/255, 52/255]
+int_color = [255/255, 209/255, 0] 
+
 
 """ #### ------------------------------------- GPRPy Functions ------------------------------------ #### """
 
@@ -284,12 +288,12 @@ def create_rtt(data: np.ndarray) -> np.ndarray:
     binary_image = ma.filled(ones, 0)
 
     # Assemble and apply color masks to the binary image
-    r_channel = binary_image * np.full_like(binary_image, red_val)
-    b_channel = binary_image * np.full_like(binary_image, blu_val)
-    g_channel = binary_image * np.full_like(binary_image, grn_val)
+    r_channel = binary_image * np.full_like(binary_image, int_color[0])
+    b_channel = binary_image * np.full_like(binary_image, int_color[2])
+    g_channel = binary_image * np.full_like(binary_image, int_color[1])
 
     # Stack together the color channels with the binary channel representing opacity to create an RGBA image
-    rgba_im = np.dstack([r_channel, b_channel, g_channel, binary_image])
+    rgba_im = np.dstack([r_channel, g_channel, b_channel, binary_image])
 
     # flip and stack the RGBA image with its original
     final = np.hstack((np.fliplr(rgba_im), rgba_im))
@@ -328,9 +332,9 @@ def create_empty(dimension, border_width):
     width = dimension[1]
 
     # start with the rgb layers
-    r_channel = np.full((height, width), brd_red, dtype=float)
-    b_channel = np.full((height, width), brd_blu, dtype=float)
-    g_channel = np.full((height, width), brd_grn, dtype=float)
+    r_channel = np.full((height, width), brd_color[0], dtype=float)
+    b_channel = np.full((height, width), brd_color[2], dtype=float)
+    g_channel = np.full((height, width), brd_color[1], dtype=float)
 
     a_channel = np.full((height, width), 1, dtype=float)
 
